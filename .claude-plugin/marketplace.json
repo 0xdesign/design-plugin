@@ -1,0 +1,15 @@
+{
+  "name": "design-plugins",
+  "description": "Design exploration plugins for Claude Code",
+  "owner": {
+    "name": "0xdesigner"
+  },
+  "plugins": [
+    {
+      "name": "design-and-refine",
+      "source": "./design-and-refine",
+      "description": "Generate UI variations, collect feedback, synthesize the best elements, and iterate to confident design decisions",
+      "version": "0.1.0"
+    }
+  ]
+}
