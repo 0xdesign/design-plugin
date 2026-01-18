@@ -288,11 +288,37 @@ Create all files under `.claude-design/`:
 │   │   └── VariantE.tsx
 │   ├── components/
 │   │   └── LabShell.tsx         # Lab layout wrapper
+│   ├── feedback/                # Interactive feedback system
+│   │   ├── types.ts             # TypeScript interfaces
+│   │   ├── selector-utils.ts    # Element identification
+│   │   ├── format-utils.ts      # Feedback formatting
+│   │   ├── FeedbackOverlay.tsx  # Main overlay component
+│   │   └── index.ts             # Module exports
 │   └── data/
 │       └── fixtures.ts          # Shared mock data
 ├── design-brief.json
 └── run-log.md
 ```
+
+### Feedback System Setup (CRITICAL - NEVER SKIP)
+
+**The FeedbackOverlay is the PRIMARY feature of the Design Lab.** Without it, users cannot provide interactive feedback. NEVER generate a Design Lab without the FeedbackOverlay.
+
+**Reliability Strategy:** To avoid import path issues across different project configurations, create the FeedbackOverlay **directly in the route directory** (e.g., `app/design-lab/FeedbackOverlay.tsx`), NOT in `.claude-design/`. This ensures a simple relative import (`./FeedbackOverlay`) always works.
+
+**Required Files in Route Directory:**
+```
+app/design-lab/           # or app/__design_lab/ if underscores work
+├── page.tsx              # Main lab page with variants
+└── FeedbackOverlay.tsx   # Self-contained overlay component (copy from templates)
+```
+
+**Template Source:** `design-and-refine/templates/feedback/FeedbackOverlay.tsx`
+
+**Why this approach:**
+- `.claude-design/` paths can fail due to bundler configurations
+- Relative imports from the same directory always work
+- The route directory gets deleted during cleanup anyway
 
 ### Route Integration
 
@@ -374,6 +400,7 @@ The Design Lab page must include:
    - Brief rationale for each variant ("Why this exists")
    - The actual rendered variant
    - Notes highlighting key differences
+   - **IMPORTANT:** Each variant container must have `data-variant="X"` attribute (where X is A, B, C, D, E, or F). This is required for the feedback system to identify which variant comments belong to.
 
 3. **Responsive behavior**:
    - Desktop: side-by-side grid (2-3 columns)
@@ -382,6 +409,48 @@ The Design Lab page must include:
 4. **Shared Data**:
    - All variants use the same fixture data from `data/fixtures.ts`
    - Ensures fair comparison
+
+5. **Feedback Overlay** (CRITICAL - NEVER OMIT):
+
+   ⚠️ **THIS IS THE MOST IMPORTANT REQUIREMENT** ⚠️
+
+   The FeedbackOverlay enables users to click on elements and leave comments. Without it, the Design Lab is just a static page with no way to collect structured feedback.
+
+   - Create `FeedbackOverlay.tsx` in the SAME directory as `page.tsx`
+   - Import with relative path: `import { FeedbackOverlay } from './FeedbackOverlay'`
+   - Render at the END of the page, after all variants
+   - Pass `targetName` prop with the component/page name
+
+   **Example integration:**
+
+```tsx
+import { FeedbackOverlay } from './FeedbackOverlay';  // Relative import - always works
+
+export default function DesignLabPage() {
+  return (
+    <div className="min-h-screen bg-background">
+      <header>...</header>
+
+      <main>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+          <div data-variant="A">
+            <VariantA />
+          </div>
+          <div data-variant="B">
+            <VariantB />
+          </div>
+          {/* ... more variants */}
+        </div>
+      </main>
+
+      {/* CRITICAL: FeedbackOverlay must be included */}
+      <FeedbackOverlay targetName="ComponentName" />
+    </div>
+  );
+}
+```
+
+   **If you forget the FeedbackOverlay, the user CANNOT provide feedback.** This defeats the entire purpose of the Design Lab.
 
 ### Code Quality
 
@@ -445,7 +514,66 @@ Running `pnpm dev` or `npm run dev` starts a long-running process that never exi
 
 ## Phase 5: Collect Feedback
 
-After presenting the lab URL, collect feedback in two stages:
+After presenting the lab URL, the user can provide feedback in two ways:
+1. **Interactive Feedback** (recommended): Using the built-in overlay in the browser
+2. **Manual Feedback**: Via AskUserQuestion in the terminal
+
+### Interactive Feedback (Primary Method)
+
+The Design Lab includes a Figma-like feedback overlay. When presenting the lab, include these instructions:
+
+```
+✅ Design Lab created!
+
+I've generated 5 design variants in `.claude-design/lab/`
+
+To view and provide feedback:
+1. Make sure your dev server is running (run `pnpm dev` if not)
+2. Open: http://localhost:3000/__design_lab
+
+**To add feedback:**
+1. Click the "Add Feedback" button (bottom-right corner)
+2. Click any element you want to comment on
+3. Type your feedback and click "Save"
+4. Repeat for all elements you want to comment on
+5. Fill in the "Overall Direction" field (required)
+6. Click "Submit All Feedback"
+7. Paste the copied text here in the terminal
+
+Or just describe your feedback manually below!
+```
+
+**When the user pastes feedback**, it will be in this format:
+
+```markdown
+## Design Lab Feedback
+
+**Target:** ComponentName
+**Comments:** 3
+
+### Variant A
+1. **Button** (`[data-testid='submit']`, button with "Submit")
+   "Make this more prominent"
+
+### Variant B
+1. **Card** (`.product-card`, div with "Product Name")
+   "Love this layout"
+
+### Overall Direction
+Go with Variant B's structure. Apply Variant A's button styling.
+```
+
+**How to parse and act on this feedback:**
+
+1. **Read the Overall Direction** first - this guides your synthesis
+2. **For each comment**, locate the element using:
+   - Primary: The CSS selector in backticks (e.g., `[data-testid='submit']`)
+   - Secondary: The element description (e.g., "button with 'Submit'")
+3. **Apply the feedback** by editing the corresponding variant file
+
+### Fallback: Manual Feedback via AskUserQuestion
+
+If the user prefers not to use the interactive overlay (or pastes manual feedback), use the AskUserQuestion flow below:
 
 ### Stage 1: Check for a Winner
 

@@ -1,0 +1,7 @@
+# OS files
+.DS_Store
+
+# Test directories (local testing only)
+test-components/
+user-sim/
+.user-sim/
