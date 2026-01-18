@@ -487,7 +487,7 @@ Reference specific aspects:
 - "Stripe's button hierarchy"
 - "Airbnb's card layout"
 - "Notion's toggle interaction"
-- "Vercupdate the el's dark mode palette"
+- "Vercel's dark mode palette"
 
 ---
 
