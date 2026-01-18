@@ -82,9 +82,11 @@ Or with a specific target:
 
 5. **Review** — open `http://localhost:3000/__design_lab` (or your dev server port) to see all variations side-by-side
 
-6. **Feedback** — tell Claude:
-   - If one is already good → select it, make minor tweaks
-   - If you like parts of different ones → describe what you like about each, get a synthesized version
+6. **Feedback** — use the interactive feedback overlay or describe what you like:
+   - Click **"Add Feedback"** to enter feedback mode
+   - Click any element to leave a comment (Figma-style)
+   - Click **"Submit Feedback"** to copy to clipboard, then paste in terminal
+   - Or just describe what you like about each variation in chat
 
 7. **Iterate** — repeat until you're confident
 
@@ -115,6 +117,22 @@ Or with a specific target:
 - Ant Design
 - styled-components
 - Emotion
+
+---
+
+## Interactive Feedback
+
+The Design Lab includes a Figma-style feedback overlay for precise comments:
+
+1. **Enter feedback mode** — click the "💬 Add Feedback" button (bottom-right)
+2. **Click any element** — a comment panel appears near your click
+3. **Type your feedback** — "Make this button larger" or "Love this spacing"
+4. **Save** — click Save or press ⌘+Enter
+5. **Repeat** — add comments to multiple elements across different variants
+6. **Submit** — fill in "Overall Direction" and click "Submit Feedback"
+7. **Paste** — the formatted feedback is copied to clipboard, paste it in your terminal
+
+Claude receives structured feedback with element selectors, so it knows exactly which elements you're referring to.
 
 ---
 
