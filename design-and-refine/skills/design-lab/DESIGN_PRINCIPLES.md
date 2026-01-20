@@ -35,6 +35,19 @@ This document contains curated best practices from world-class designers and des
 - **Visual hierarchy** - Guide attention with size, color, contrast, position
 - **Reduce cognitive friction** - Minimize decisions, clicks, and reading
 
+### URL & State Principles
+
+- **URL state reflection** - Important UI state (filters, tabs, pagination) should be in the URL
+- **Shareable links** - Users should be able to share/bookmark the current view
+- **Browser navigation** - Back/forward buttons should work as expected
+
+### Destructive Actions
+
+- **Confirmation required** - Delete, remove, and irreversible actions need explicit confirmation
+- **Clear consequences** - State exactly what will happen ("This will permanently delete 5 files")
+- **Recovery path** - Prefer soft delete with undo over immediate permanent deletion
+- **Visual distinction** - Destructive buttons use warning colors (red) and distinct styling
+
 ---
 
 ## Part 2: Visual Design Systems
@@ -59,6 +72,15 @@ Caption:    12-13px, +0.01em tracking, 400-500 weight
 - Use weight contrast (400 vs 600) more than size contrast
 - Limit to 2 font families maximum
 - System fonts for performance: `-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif`
+
+**Typographic details:**
+
+- Use proper ellipsis `…` not `...` (three dots)
+- Use curly quotes `"` `"` not straight quotes `"`
+- Non-breaking spaces for values: `10 MB`, `5 items` (use `&nbsp;` or `\u00A0`)
+- `font-variant-numeric: tabular-nums` for numbers in tables, counters, prices
+- `text-wrap: balance` for headings (prevents orphans/widows)
+- `text-wrap: pretty` for body text (better line breaks)
 
 ### Spacing System (8px grid)
 
@@ -108,6 +130,75 @@ Text tertiary:  #A3A3A3 / #737373 (dark)
 - Use opacity for secondary states (hover, disabled)
 - Dark mode: don't just invert—reduce contrast, use darker surfaces
 
+**Dark mode setup:**
+
+```html
+<!-- On <html> element -->
+<html class="dark" style="color-scheme: dark">
+
+<!-- Theme color matching page background -->
+<meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
+```
+
+### Content Handling
+
+**Text truncation:**
+
+```css
+/* Single line truncation */
+.truncate {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Multi-line truncation */
+.line-clamp-2 {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+}
+
+/* Break long words */
+.break-words {
+  overflow-wrap: break-word;
+  word-break: break-word;
+}
+```
+
+**Flex children with text:**
+
+```css
+/* IMPORTANT: Flex children with text need min-w-0 to truncate properly */
+.flex-child-with-text {
+  min-width: 0; /* Allows text to shrink below content size */
+}
+```
+
+**Empty states:**
+
+- Always design the empty state—it's the first thing users see
+- Include helpful message + primary action
+- Use illustration or icon to add visual interest
+
+**Images:**
+
+```jsx
+// Always include explicit dimensions to prevent layout shift
+<img
+  src="/image.jpg"
+  width={800}
+  height={600}
+  alt="Description"
+  loading="lazy"  // Defer off-screen images
+/>
+
+// For above-the-fold images
+<img src="/hero.jpg" width={1200} height={800} alt="Hero" priority />
+```
+
 ### Border Radius (from modern SaaS)
 
 ```
@@ -156,40 +247,119 @@ Level 4: 0 20px 25px rgba(0,0,0,0.15)    - High (popovers)
 
 **States:**
 
-- Default → Hover (+shadow or darken) → Active (scale 0.98) → Disabled (50% opacity)
+- Default → Hover (+shadow or darken) → Active (scale 0.97) → Disabled (50% opacity)
 - Loading: replace text with spinner, maintain width
 - Min width: 80px; min height: 36px (touch-friendly: 44px)
 
 **Best practices:**
 
+- **Specific labels:** "Save API Key" not "Continue" or "Submit"
 - Verb + noun labels: "Create project" not "Create"
 - Sentence case, not ALL CAPS
 - Icon left of text (or icon-only with tooltip)
 - Primary button right-aligned in forms/dialogs
+- **Icon buttons require `aria-label`**
 
-### Forms (from Airbnb, Stripe)
+**Active state feedback:**
+
+```css
+button:active {
+  transform: scale(0.97);
+}
+```
+
+### Forms (from Airbnb, Stripe, Vercel)
 
 **Input anatomy:**
 
 ```
 ┌─────────────────────────────────┐
-│ Label                           │
+│ Label                           │  ← Required (above input, not inside)
 │ ┌─────────────────────────────┐ │
-│ │ Placeholder / Value         │ │
+│ │ Placeholder...              │ │  ← Format hint only, ends with ...
 │ └─────────────────────────────┘ │
-│ Helper text or error message    │
+│ Helper text or error message    │  ← Specific and actionable
 └─────────────────────────────────┘
+```
+
+**Autocomplete attributes (required):**
+
+```html
+<!-- Always use appropriate autocomplete for user data -->
+<input type="email" autocomplete="email" />
+<input type="text" autocomplete="name" />
+<input type="text" autocomplete="given-name" />
+<input type="text" autocomplete="family-name" />
+<input type="text" autocomplete="organization" />
+<input type="text" autocomplete="street-address" />
+<input type="text" autocomplete="postal-code" />
+<input type="tel" autocomplete="tel" />
+<input type="password" autocomplete="current-password" />
+<input type="password" autocomplete="new-password" />
+<input type="text" autocomplete="one-time-code" />
+```
+
+**Input types and modes:**
+
+```html
+<!-- Use correct type for validation and keyboard -->
+<input type="email" inputmode="email" />
+<input type="tel" inputmode="tel" />
+<input type="url" inputmode="url" />
+<input type="number" inputmode="numeric" />
+
+<!-- Numeric input without spinners -->
+<input type="text" inputmode="numeric" pattern="[0-9]*" />
+```
+
+**Disable spellcheck where inappropriate:**
+
+```jsx
+// Disable for codes, emails, usernames, URLs
+<input type="text" spellCheck={false} autoComplete="username" />
+<input type="email" spellCheck={false} />
+<input type="text" spellCheck={false} placeholder="Enter code..." />
+```
+
+**Anti-patterns to avoid:**
+
+```jsx
+// NEVER block paste - this is hostile UX
+<input onPaste={(e) => e.preventDefault()} />  // ❌ NEVER DO THIS
+
+// NEVER use placeholder as label
+<input placeholder="Email" />  // ❌ Placeholder disappears on focus
+
+// NEVER validate on every keystroke
+onChange={(e) => validateEmail(e.target.value)}  // ❌ Too aggressive
 ```
 
 **Best practices:**
 
 - Labels above inputs (not inside—accessibility)
-- Placeholder ≠ label; use for format hints only
+- Placeholder ≠ label; use for format hints only, end with `...`
 - Inline validation on blur, not on every keystroke
 - Error messages: specific and actionable ("Email must include @")
+- **Focus first error field** after form submission fails
 - Success state: checkmark icon, green border (brief)
 - Required fields: mark optional ones instead of required
 - Single column forms outperform multi-column
+
+**Unsaved changes warning:**
+
+```jsx
+// Warn users before leaving with unsaved changes
+useEffect(() => {
+  const handleBeforeUnload = (e) => {
+    if (hasUnsavedChanges) {
+      e.preventDefault();
+      e.returnValue = '';
+    }
+  };
+  window.addEventListener('beforeunload', handleBeforeUnload);
+  return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+}, [hasUnsavedChanges]);
+```
 
 ### Cards (from Material, Apple)
 
@@ -221,6 +391,7 @@ Level 4: 0 20px 25px rgba(0,0,0,0.15)    - High (popovers)
 **Best practices:**
 
 - Left-align text, right-align numbers
+- **Use `tabular-nums` for numeric columns** (consistent width digits)
 - Zebra striping OR row hover, not both
 - Sticky header on scroll
 - Sortable columns: show current sort indicator
@@ -228,6 +399,14 @@ Level 4: 0 20px 25px rgba(0,0,0,0.15)    - High (popovers)
 - Empty state: helpful message + action
 - Pagination vs infinite scroll: pagination for data accuracy, infinite for browsing
 - Min row height: 48px for touch; 40px for dense
+- **Virtualize tables with >50 rows**
+
+```css
+.numeric-column {
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+```
 
 ### Navigation (from Apple HIG, Material)
 
@@ -282,6 +461,54 @@ Success    → Completed successfully (brief)
 Empty      → No data to display (helpful message + action)
 ```
 
+### Touch & Pointer Interactions
+
+**Faster tap response:**
+
+```css
+/* Remove 300ms tap delay on touch devices */
+button, a, [role="button"] {
+  touch-action: manipulation;
+}
+```
+
+**Contain scroll in modals:**
+
+```css
+/* Prevent scroll chaining to body when modal/drawer reaches edge */
+.modal, .drawer, .dropdown {
+  overscroll-behavior: contain;
+}
+```
+
+**Touch targets:**
+
+- Minimum 44x44px for all interactive elements (Apple HIG)
+- Provide adequate spacing between targets (8px minimum)
+
+**Hover states for pointer devices only:**
+
+```css
+/* Only apply hover effects on devices with fine pointers */
+@media (hover: hover) and (pointer: fine) {
+  .card:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-lg);
+  }
+}
+```
+
+**Tap highlight:**
+
+```css
+/* Customize or remove tap highlight on mobile */
+button {
+  -webkit-tap-highlight-color: transparent; /* Remove default */
+  /* Or use a custom color */
+  -webkit-tap-highlight-color: rgba(0, 0, 0, 0.1);
+}
+```
+
 ### Optimistic Updates (from Linear, Notion)
 
 - Update UI immediately, sync in background
@@ -304,45 +531,80 @@ Empty      → No data to display (helpful message + action)
 
 ## Part 5: Motion & Animation
 
-### The 12 Principles (Adapted for UI)
+### The Frequency Principle
 
-1. **Timing** - Fast for small changes (150-200ms), slow for large (300-500ms)
-2. **Easing** - Never linear; use ease-out for entrances, ease-in for exits
-3. **Anticipation** - Slight scale up before action (button press)
-4. **Follow-through** - Elements settle into place (subtle overshoot)
-5. **Staging** - Direct attention; one thing animates at a time
-6. **Secondary action** - Supporting elements animate subtly with primary
+Animation frequency should match usage frequency:
 
-### Timing Guidelines (from Material Motion)
+| Usage Pattern | Animation Approach |
+|---|---|
+| 100+ times/day | No animation—instant response |
+| Occasional use | Standard animation (150-300ms) |
+| Rare/first-time | Can add delight, longer duration |
 
-```
-Micro-interactions:     100-150ms (buttons, toggles, hover)
-Small transitions:      150-200ms (dropdowns, tooltips)
-Medium transitions:     200-300ms (modals, panels)
-Large transitions:      300-500ms (page transitions, complex reveals)
-Staggered lists:        50-100ms between items
-```
+Example: A "send message" button used constantly → instant. An "export report" button used weekly → can animate.
 
-### Easing Functions
+### Easing Blueprint
+
+**Ease-out family (most common):**
+
+Use for entrances, user-initiated actions, and most UI transitions.
 
 ```css
-/* Standard easings */
---ease-out: cubic-bezier(0.16, 1, 0.3, 1);      /* Entrances */
---ease-in: cubic-bezier(0.7, 0, 0.84, 0);       /* Exits */
---ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);  /* Move/resize */
-
-/* Expressive easings */
---ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);  /* Playful bounce */
---ease-smooth: cubic-bezier(0.4, 0, 0.2, 1);       /* Material standard */
+:root {
+  /* Increasing intensity: quad → cubic → quart → quint */
+  --ease-out-quad: cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  --ease-out-cubic: cubic-bezier(0.215, 0.61, 0.355, 1);
+  --ease-out-quart: cubic-bezier(0.165, 0.84, 0.44, 1);
+  --ease-out-quint: cubic-bezier(0.23, 1, 0.32, 1);
+}
 ```
+
+**Ease-in-out family:**
+
+Use for on-screen movement (element moving from point A to point B).
+
+```css
+:root {
+  --ease-in-out-quad: cubic-bezier(0.455, 0.03, 0.515, 0.955);
+  --ease-in-out-cubic: cubic-bezier(0.645, 0.045, 0.355, 1);
+}
+```
+
+**Easing decision flowchart:**
+
+```
+Is the element entering or exiting the screen?
+  → Yes: Use ease-out (for both enter AND exit)
+
+Is the element moving on screen (A to B)?
+  → Yes: Use ease-in-out
+
+Is it a hover state or color change?
+  → Yes: Use ease (CSS default) or ease-out-quad
+
+Is it constant/looping motion (spinner, progress)?
+  → Yes: Use linear
+```
+
+### Timing Guidelines
+
+| Element Type | Duration | Notes |
+|---|---|---|
+| Micro-interactions | 100-150ms | Buttons, toggles, hover states |
+| Tooltips, dropdowns | 150-250ms | Small UI appearing |
+| Modals, drawers | 200-300ms | Larger surfaces |
+| Page transitions | 300-400ms | Full view changes |
+| Staggered items | 30-50ms delay | Between each item |
+
+**Important:** Exit animations should be 20-30% faster than entrances.
 
 ### Animation Patterns
 
 **Entrances:**
 
 - Fade in + slide up (8-16px)
-- Scale from 0.95 to 1 + fade
-- Stagger children by 50ms
+- Scale from 0.95 to 1 + fade (never from 0)
+- Stagger children by 30-50ms
 
 **Exits:**
 
@@ -350,35 +612,179 @@ Staggered lists:        50-100ms between items
 - Scale to 0.95 + fade
 - Slide in direction of dismissal
 
-**Hover/Focus:**
+**Transform origin:**
 
-- TranslateY -2px (lift)
-- Scale 1.02-1.05 (grow)
-- Shadow increase
-- Background color shift
+Always set `transform-origin` toward the trigger element:
 
-**Loading:**
+```css
+/* Dropdown opening from button */
+.dropdown {
+  transform-origin: top left; /* Opens from button location */
+}
 
-- Skeleton shimmer (gradient animation)
-- Pulse (opacity 0.5-1)
-- Spinner (rotate continuously)
+/* Modal opening from center */
+.modal {
+  transform-origin: center center;
+}
+```
+
+**Hover flicker prevention:**
+
+```css
+/* ❌ Don't animate the parent on hover */
+.card:hover {
+  transform: scale(1.02); /* Causes flicker */
+}
+
+/* ✅ Animate a child element instead */
+.card:hover .card-content {
+  transform: scale(1.02);
+}
+```
+
+**Sequential tooltips:**
+
+After the first tooltip in a series, skip animation for subsequent ones:
+
+```jsx
+// Skip animation if another tooltip was shown recently
+const skipAnimation = Date.now() - lastTooltipTime < 300;
+```
+
+### Spring Animations
+
+**When to use springs:**
+
+- Drag and drop interactions
+- Gesture-based animations
+- Interruptible motion (user can grab mid-animation)
+- Physics-based feel (natural, organic)
+
+**Configuration:**
+
+```jsx
+// Framer Motion spring config
+const springConfig = {
+  type: "spring",
+  duration: 0.5,  // Overall duration
+  bounce: 0.2     // 0 = no bounce, 1 = very bouncy
+};
+
+// Subtle bounce (most UI): 0.1 - 0.3
+// Playful bounce: 0.3 - 0.5
+// Avoid > 0.5 in most production UI
+```
+
+### Animation Performance
+
+**Only animate compositor properties:**
+
+```css
+/* ✅ GPU-accelerated (cheap) */
+transform: translateX(100px);
+transform: scale(1.1);
+transform: rotate(45deg);
+opacity: 0.5;
+
+/* ❌ Triggers layout/paint (expensive) */
+width: 200px;
+height: 200px;
+top: 100px;
+left: 100px;
+margin: 20px;
+padding: 20px;
+```
+
+**Never use `transition: all`:**
+
+```css
+/* ❌ Bad - animates everything including layout properties */
+.element {
+  transition: all 0.3s ease;
+}
+
+/* ✅ Good - explicit properties */
+.element {
+  transition: transform 0.3s var(--ease-out-cubic),
+              opacity 0.3s var(--ease-out-cubic);
+}
+```
+
+**Fix transform shakiness:**
+
+```css
+/* Add will-change if animation looks shaky */
+.animated-element {
+  will-change: transform;
+}
+
+/* Remove after animation completes to free memory */
+```
+
+**CSS vs JavaScript animations:**
+
+| Use CSS | Use JavaScript |
+|---|---|
+| Simple state transitions | Complex sequences |
+| Hover/focus effects | Gesture-based |
+| No user interaction during | Interruptible animations |
+| Performance-critical | Dynamic values |
 
 ### Reduced Motion
 
+**Every animation needs a reduced motion alternative:**
+
 ```css
+/* Base animation */
+.modal {
+  animation: slideIn 0.3s var(--ease-out-cubic);
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+}
+
+/* Reduced motion: instant or fade only */
 @media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after {
-    animation-duration: 0.01ms !important;
-    transition-duration: 0.01ms !important;
+  .modal {
+    animation: fadeIn 0.15s ease;
+  }
+
+  @keyframes fadeIn {
+    from { opacity: 0; }
   }
 }
 ```
 
-Always respect user preferences. Replace motion with:
+**Framer Motion hook:**
 
-- Instant state changes
-- Opacity transitions only
-- No parallax or auto-playing video
+```jsx
+import { useReducedMotion } from 'framer-motion';
+
+function Modal({ children }) {
+  const shouldReduceMotion = useReducedMotion();
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: shouldReduceMotion ? 0 : 16 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: shouldReduceMotion ? 0.1 : 0.3 }}
+    >
+      {children}
+    </motion.div>
+  );
+}
+```
+
+**What reduced motion should do:**
+
+- Remove parallax effects
+- Stop auto-playing videos/carousels
+- Replace slide/scale with fade or instant
+- Keep essential feedback (success checkmarks can still appear, just not animated)
 
 ---
 
@@ -414,44 +820,363 @@ Always respect user preferences. Replace motion with:
 
 ### Focus Management
 
+**Use `:focus-visible` over `:focus`:**
+
 ```css
-/* Visible focus for keyboard users */
+/* ✅ Only show focus ring for keyboard navigation */
 :focus-visible {
   outline: 2px solid var(--color-primary);
   outline-offset: 2px;
 }
 
-/* Remove default only if custom focus exists */
-:focus:not(:focus-visible) {
-  outline: none;
+/* ❌ Don't remove outline without replacement */
+:focus {
+  outline: none; /* BAD - removes accessibility */
 }
 ```
 
+**Compound controls:**
+
+```css
+/* Highlight parent when any child is focused */
+.input-group:focus-within {
+  box-shadow: 0 0 0 2px var(--color-primary);
+}
+```
+
+### Keyboard Navigation
+
+**All interactive elements must be keyboard-operable:**
+
+```jsx
+// ❌ Click-only interaction
+<div onClick={handleAction}>Click me</div>
+
+// ✅ Keyboard accessible
+<button onClick={handleAction}>Click me</button>
+
+// ✅ If must use div, add keyboard support
+<div
+  role="button"
+  tabIndex={0}
+  onClick={handleAction}
+  onKeyDown={(e) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      handleAction();
+    }
+  }}
+>
+  Click me
+</div>
+```
+
+**Keyboard patterns:**
+
+- Tab order must match visual order
+- Enter/Space activate buttons and links
+- Escape closes dialogs and dropdowns
+- Arrow keys navigate within components (tabs, menus)
+
 ### ARIA Patterns
 
-```html
-<!-- Button (when not using <button>) -->
-<div role="button" tabindex="0" aria-pressed="false">
+**Icon buttons require `aria-label`:**
 
+```jsx
+// ❌ No accessible name
+<button><CloseIcon /></button>
+
+// ✅ Accessible
+<button aria-label="Close dialog"><CloseIcon /></button>
+```
+
+**Form controls require labels:**
+
+```jsx
+// ❌ No label
+<input type="email" placeholder="Email" />
+
+// ✅ Visible label
+<label>
+  Email
+  <input type="email" />
+</label>
+
+// ✅ Or visually hidden label
+<label htmlFor="email" className="sr-only">Email</label>
+<input id="email" type="email" placeholder="email@example.com" />
+```
+
+**Live regions for async updates:**
+
+```jsx
+// Announce dynamic content to screen readers
+<div aria-live="polite" aria-atomic="true">
+  {statusMessage}
+</div>
+```
+
+**Semantic HTML before ARIA:**
+
+```jsx
+// ❌ ARIA role when native element exists
+<div role="button" tabIndex={0}>Submit</div>
+
+// ✅ Use native element
+<button>Submit</button>
+
+// ❌ ARIA for native functionality
+<div role="navigation">...</div>
+
+// ✅ Use native element
+<nav>...</nav>
+```
+
+**Common ARIA patterns:**
+
+```html
 <!-- Modal -->
-<div role="dialog" aria-modal="true" aria-labelledby="title">
+<div role="dialog" aria-modal="true" aria-labelledby="modal-title">
+  <h2 id="modal-title">Dialog Title</h2>
+</div>
 
 <!-- Tab panel -->
 <div role="tablist">
-  <button role="tab" aria-selected="true" aria-controls="panel1">
+  <button role="tab" aria-selected="true" aria-controls="panel1">Tab 1</button>
 </div>
-<div role="tabpanel" id="panel1">
-
-<!-- Live region (for dynamic updates) -->
-<div aria-live="polite" aria-atomic="true">
+<div role="tabpanel" id="panel1">Content</div>
 
 <!-- Loading state -->
 <button aria-busy="true" aria-describedby="loading-text">
+  <span id="loading-text" className="sr-only">Loading...</span>
+</button>
 ```
 
 ---
 
-## Part 7: Design System References
+## Part 7: Performance Patterns
+
+### Virtualization
+
+**Large lists require virtualization:**
+
+```jsx
+// Use virtualization for lists > 50 items
+import { VList } from 'virtua';
+
+function LargeList({ items }) {
+  return (
+    <VList style={{ height: 400 }}>
+      {items.map(item => <ListItem key={item.id} item={item} />)}
+    </VList>
+  );
+}
+```
+
+**CSS-based virtualization:**
+
+```css
+/* For simpler cases, use content-visibility */
+.list-item {
+  content-visibility: auto;
+  contain-intrinsic-size: 0 60px; /* Estimated height */
+}
+```
+
+### Layout Thrashing
+
+**Avoid layout reads in render:**
+
+```jsx
+// ❌ Bad - forces layout recalculation
+function Component() {
+  const width = element.getBoundingClientRect().width; // Layout read
+  element.style.width = width + 10 + 'px'; // Layout write
+  const height = element.offsetHeight; // Another layout read!
+}
+
+// ✅ Good - batch reads, then writes
+function Component() {
+  // Batch reads
+  const width = element.getBoundingClientRect().width;
+  const height = element.offsetHeight;
+
+  // Then batch writes
+  requestAnimationFrame(() => {
+    element.style.width = width + 10 + 'px';
+    element.style.height = height + 10 + 'px';
+  });
+}
+```
+
+**Properties that trigger layout:**
+
+- `offsetHeight`, `offsetWidth`, `offsetTop`, `offsetLeft`
+- `getBoundingClientRect()`
+- `scrollHeight`, `scrollWidth`, `scrollTop`, `scrollLeft`
+- `getComputedStyle()`
+
+### Resource Loading
+
+**Preconnect to CDN domains:**
+
+```html
+<!-- Add in <head> for domains you'll fetch from -->
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://cdn.example.com" crossorigin />
+```
+
+**Preload critical fonts:**
+
+```html
+<link
+  rel="preload"
+  href="/fonts/inter-var.woff2"
+  as="font"
+  type="font/woff2"
+  crossorigin
+/>
+```
+
+**Image loading strategy:**
+
+```jsx
+// Above the fold: load immediately
+<img src="/hero.jpg" fetchpriority="high" />
+
+// Below the fold: lazy load
+<img src="/card.jpg" loading="lazy" />
+
+// Critical background images: preload
+<link rel="preload" as="image" href="/hero-bg.jpg" />
+```
+
+---
+
+## Part 8: Content & Copy
+
+### Writing Style
+
+**Active voice over passive:**
+
+```
+✅ "Install the CLI"
+❌ "The CLI will be installed"
+
+✅ "Your changes were saved"
+❌ "Changes have been saved by the system"
+```
+
+**Title Case for headings and buttons:**
+
+```
+✅ "Save API Key"
+❌ "Save api key"
+
+✅ "Getting Started"
+❌ "Getting started"
+```
+
+**Use numerals:**
+
+```
+✅ "8 deployments"
+❌ "eight deployments"
+
+✅ "3 items selected"
+❌ "three items selected"
+```
+
+### Labels & Messages
+
+**Specific labels over generic:**
+
+```
+✅ "Save API Key"
+❌ "Continue"
+
+✅ "Create Project"
+❌ "Submit"
+
+✅ "Delete Repository"
+❌ "Confirm"
+```
+
+**Error messages include fix/next step:**
+
+```
+✅ "Email must include @ symbol"
+❌ "Invalid email"
+
+✅ "Password must be at least 8 characters"
+❌ "Password too short"
+
+✅ "Could not connect. Check your internet connection and try again."
+❌ "Network error"
+```
+
+### Internationalization
+
+**Use Intl APIs for formatting:**
+
+```jsx
+// ❌ Hardcoded format
+const date = `${month}/${day}/${year}`;
+const price = `$${amount.toFixed(2)}`;
+
+// ✅ Locale-aware formatting
+const date = new Intl.DateTimeFormat('en-US', {
+  dateStyle: 'medium'
+}).format(new Date());
+
+const price = new Intl.NumberFormat('en-US', {
+  style: 'currency',
+  currency: 'USD'
+}).format(amount);
+
+// Relative time
+const rtf = new Intl.RelativeTimeFormat('en', { numeric: 'auto' });
+rtf.format(-1, 'day'); // "yesterday"
+```
+
+---
+
+## Part 9: Anti-Patterns Checklist
+
+Flag these patterns during design review:
+
+### Accessibility Violations
+
+- [ ] `user-scalable=no` or `maximum-scale=1` in viewport meta
+- [ ] `<div onClick>` instead of `<button>` for interactive elements
+- [ ] Form inputs without associated labels
+- [ ] Icon buttons without `aria-label`
+- [ ] `outline: none` without focus replacement
+
+### Performance Issues
+
+- [ ] `transition: all` (animates layout properties)
+- [ ] Images without explicit `width` and `height`
+- [ ] Large arrays (>50 items) rendered without virtualization
+- [ ] Layout reads (`getBoundingClientRect`) in render cycle
+
+### UX Problems
+
+- [ ] `onPaste` with `preventDefault()` (blocks paste)
+- [ ] Hardcoded date/number formats (not using Intl)
+- [ ] Placeholder used as label
+- [ ] Validation on every keystroke
+- [ ] No empty state designed
+
+### Mobile Issues
+
+- [ ] Touch targets smaller than 44x44px
+- [ ] No `touch-action: manipulation` on buttons
+- [ ] Hover effects without `@media (hover: hover)` query
+
+---
+
+## Part 10: Design System References
 
 ### Study These Systems
 
@@ -477,7 +1202,6 @@ Always respect user preferences. Replace motion with:
 
 - [Apple](https://apple.com) - Cinematic quality
 - [Framer](https://framer.com) - Motion-first
-- [Lottie examples](https://lottiefiles.com) - Micro-animation inspiration
 
 ### When Generating Variants
 
@@ -487,7 +1211,7 @@ Reference specific aspects:
 - "Stripe's button hierarchy"
 - "Airbnb's card layout"
 - "Notion's toggle interaction"
-- "Vercupdate the el's dark mode palette"
+- "Vercel's dark mode palette"
 
 ---
 
@@ -500,4 +1224,16 @@ When unsure, ask:
 3. **Is it consistent?** → Matches patterns elsewhere in the app
 4. **Is it accessible?** → Keyboard, screen reader, color contrast
 5. **Is it calm?** → No unnecessary motion, color, or elements
+6. **Is it specific?** → Labels describe exactly what will happen
+7. **Is it recoverable?** → User can undo or go back
 
+### Animation Decision Quick Check
+
+```
+Should this animate?
+├── Used 100+ times/day? → No animation
+├── Entering/exiting screen? → ease-out, 150-250ms
+├── Moving on screen? → ease-in-out, 200-300ms
+├── Hover/color change? → ease, 100-150ms
+└── Unsure? → Start without animation, add if needed
+```
