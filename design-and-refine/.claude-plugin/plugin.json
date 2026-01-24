@@ -1,7 +1,7 @@
 {
   "name": "design-and-refine",
   "description": "Generate distinct UI design variations, collect feedback, synthesize the best elements, and produce implementation plans",
-  "version": "0.1.0",
+  "version": "1.1.0",
   "author": {
     "name": "0xdesigner"
   },
