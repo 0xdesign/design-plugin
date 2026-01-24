@@ -5,3 +5,6 @@
 test-components/
 user-sim/
 .user-sim/
+
+# Separate project (lives in its own repo)
+design-ide/
