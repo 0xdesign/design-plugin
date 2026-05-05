@@ -13,7 +13,7 @@ claude --plugin-dir /path/to/design-variations-plugin
 ### From Marketplace
 
 ```bash
-/plugin marketplace add 0xdesigner/design-plugin
+/plugin marketplace add 0xdesign/design-plugin
 /plugin install design-and-refine@design-plugins
 ```
 
