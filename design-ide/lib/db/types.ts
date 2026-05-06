@@ -46,6 +46,7 @@ export interface Database {
           github_id?: string | null;
           created_at?: string;
         };
+        Relationships: [];
       };
       projects: {
         Row: {
@@ -78,6 +79,7 @@ export interface Database {
           created_at?: string;
           updated_at?: string;
         };
+        Relationships: [];
       };
       variants: {
         Row: {
@@ -116,6 +118,7 @@ export interface Database {
           is_approved?: boolean;
           created_at?: string;
         };
+        Relationships: [];
       };
       feedback: {
         Row: {
@@ -142,6 +145,7 @@ export interface Database {
           comment?: string | null;
           created_at?: string;
         };
+        Relationships: [];
       };
       messages: {
         Row: {
@@ -168,6 +172,7 @@ export interface Database {
           tool_calls?: Json | null;
           created_at?: string;
         };
+        Relationships: [];
       };
       generated_files: {
         Row: {
@@ -194,8 +199,11 @@ export interface Database {
           file_type?: FileType | null;
           created_at?: string;
         };
+        Relationships: [];
       };
     };
+    Views: Record<string, never>;
+    Functions: Record<string, never>;
   };
 }
 

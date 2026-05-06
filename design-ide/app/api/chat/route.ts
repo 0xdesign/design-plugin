@@ -1,4 +1,4 @@
-import { streamText, convertToCoreMessages } from 'ai';
+import { streamText, convertToModelMessages, stepCountIs } from 'ai';
 import { anthropic } from '@ai-sdk/anthropic';
 import { tools } from '@/lib/ai/tools';
 import { SYSTEM_PROMPT } from '@/lib/ai/prompts';
@@ -12,9 +12,9 @@ export async function POST(req: Request) {
     const result = streamText({
       model: anthropic('claude-sonnet-4-20250514'),
       system: SYSTEM_PROMPT,
-      messages: convertToCoreMessages(messages),
+      messages: convertToModelMessages(messages),
       tools,
-      maxSteps: 10, // Allow multi-step for generating all 5 variants
+      stopWhen: stepCountIs(10), // Allow multi-step for generating all 5 variants
       onStepFinish: async ({ toolCalls, toolResults }) => {
         // Log tool usage for debugging
         if (toolCalls && toolCalls.length > 0) {
@@ -29,7 +29,7 @@ export async function POST(req: Request) {
       },
     });
 
-    return result.toDataStreamResponse();
+    return result.toUIMessageStreamResponse();
   } catch (error) {
     console.error('Chat API error:', error);
     return new Response(

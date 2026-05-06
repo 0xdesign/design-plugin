@@ -1,13 +1,14 @@
 'use client';
 
-import { useRef, useEffect } from 'react';
-import { useChat, type Message as AIMessage } from 'ai/react';
+import { useRef, useEffect, useMemo, useState } from 'react';
+import { useChat } from '@ai-sdk/react';
+import { DefaultChatTransport, type UIMessage } from 'ai';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Message } from './Message';
 import { InterviewQuestion } from './InterviewQuestion';
-import { Send, Loader2, StopCircle } from 'lucide-react';
+import { Send, StopCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { VariantData } from '@/components/prototype/VariantCard';
 import type {
@@ -23,6 +24,43 @@ interface ChatPanelProps {
   className?: string;
 }
 
+type ToolOutputPart = UIMessage['parts'][number] & {
+  state: 'output-available';
+  output: unknown;
+};
+
+function getMessageText(message: UIMessage) {
+  return message.parts
+    .filter((part) => part.type === 'text')
+    .map((part) => part.text)
+    .join('');
+}
+
+function isToolOutputPart(part: UIMessage['parts'][number]): part is ToolOutputPart {
+  return (
+    part.type.startsWith('tool-') &&
+    'state' in part &&
+    part.state === 'output-available' &&
+    'output' in part
+  );
+}
+
+function isToolResult(output: unknown): output is ToolResult {
+  return (
+    typeof output === 'object' &&
+    output !== null &&
+    'type' in output &&
+    typeof (output as { type: unknown }).type === 'string'
+  );
+}
+
+function getToolResults(message: UIMessage): ToolResult[] {
+  return message.parts
+    .filter(isToolOutputPart)
+    .map((part) => part.output)
+    .filter(isToolResult);
+}
+
 export function ChatPanel({
   projectId,
   onVariantsGenerated,
@@ -31,42 +69,13 @@ export function ChatPanel({
 }: ChatPanelProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
-
-  const {
-    messages,
-    input,
-    handleInputChange,
-    handleSubmit,
-    isLoading,
-    stop,
-    append,
-  } = useChat({
-    api: '/api/chat',
-    body: { projectId },
-    onFinish: (message) => {
-      // Process tool results from the message
-      processToolResults(message);
-    },
-  });
-
-  // Auto-scroll to bottom on new messages
-  useEffect(() => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-    }
-  }, [messages]);
+  const [input, setInput] = useState('');
 
   // Process tool results to extract variants and other data
-  const processToolResults = (message: AIMessage) => {
-    if (!message.toolInvocations) return;
-
+  const processToolResults = (message: UIMessage) => {
     const variants: VariantData[] = [];
 
-    for (const invocation of message.toolInvocations) {
-      if (invocation.state !== 'result') continue;
-
-      const result = invocation.result as ToolResult;
-
+    for (const result of getToolResults(message)) {
       if (result.type === 'variant') {
         const variantResult = result as GenerateVariantResult;
         variants.push({
@@ -94,21 +103,65 @@ export function ChatPanel({
     }
   };
 
+  const transport = useMemo(
+    () =>
+      new DefaultChatTransport({
+        api: '/api/chat',
+        body: { projectId },
+      }),
+    [projectId]
+  );
+
+  const {
+    messages,
+    status,
+    stop,
+    sendMessage,
+  } = useChat({
+    transport,
+    onFinish: ({ message }) => {
+      // Process tool results from the message
+      processToolResults(message);
+    },
+  });
+
+  const isLoading = status === 'submitted' || status === 'streaming';
+
+  // Auto-scroll to bottom on new messages
+  useEffect(() => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    }
+  }, [messages]);
+
+  const handleInputChange = (
+    event: React.ChangeEvent<HTMLInputElement> | React.ChangeEvent<HTMLTextAreaElement>
+  ) => {
+    setInput(event.target.value);
+  };
+
+  const handleSubmit = (event?: { preventDefault?: () => void }) => {
+    event?.preventDefault?.();
+
+    const trimmedInput = input.trim();
+    if (!trimmedInput || isLoading) return;
+
+    setInput('');
+    void sendMessage({ text: trimmedInput });
+  };
+
   // Handle interview question answers
   const handleQuestionAnswer = (answer: string) => {
-    append({
-      role: 'user',
-      content: answer,
-    });
+    void sendMessage({ text: answer });
   };
 
   // Render messages with special handling for tool invocations
-  const renderMessage = (message: AIMessage, index: number) => {
+  const renderMessage = (message: UIMessage, index: number) => {
+    const content = getMessageText(message);
+
     // Check for pending questions in tool invocations
-    const pendingQuestion = message.toolInvocations?.find(
-      (inv) =>
-        inv.state === 'result' &&
-        (inv.result as ToolResult).type === 'question'
+    const pendingQuestion = getToolResults(message).find(
+      (result): result is AskQuestionResult => result.type === 'question'
     );
 
     const isLastMessage = index === messages.length - 1;
@@ -116,31 +169,25 @@ export function ChatPanel({
     return (
       <div key={message.id} className="space-y-3">
         {/* Regular message content */}
-        {message.content && (
+        {content && (
           <Message
-            role={message.role as 'user' | 'assistant'}
-            content={message.content}
+            role={message.role === 'assistant' ? 'assistant' : 'user'}
+            content={content}
           />
         )}
 
         {/* Interview question UI */}
         {pendingQuestion && isLastMessage && (
           <InterviewQuestion
-            question={(pendingQuestion.result as AskQuestionResult).question}
-            options={(pendingQuestion.result as AskQuestionResult).options}
-            allowFreeform={
-              (pendingQuestion.result as AskQuestionResult).allowFreeform
-            }
+            question={pendingQuestion.question}
+            options={pendingQuestion.options}
+            allowFreeform={pendingQuestion.allowFreeform}
             onAnswer={handleQuestionAnswer}
           />
         )}
 
         {/* Variant generation indicator */}
-        {message.toolInvocations?.some(
-          (inv) =>
-            inv.state === 'result' &&
-            (inv.result as ToolResult).type === 'variant'
-        ) && (
+        {getToolResults(message).some((result) => result.type === 'variant') && (
           <div className="flex items-center gap-2 text-sm text-muted-foreground pl-11">
             <div className="w-2 h-2 bg-green-500 rounded-full" />
             Generated variants - check the preview panel
